@@ -25,7 +25,7 @@ cortex-m-rt = "0.7.5"
 panic-probe = { version = "1.0", features = ["print-defmt"] }
 
 static_cell = "2"
-
+portable-atomic = { version = "1.11.1", features = ["critical-section"] }
 
 # cargo build/run
 [profile.dev]
