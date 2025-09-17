@@ -26,6 +26,17 @@ async fn cyw43_task(runner: cyw43::Runner<'static, Output<'static>, PioSpi<'stat
     runner.run().await
 }
 
+#[embassy_executor::task]
+async fn blinky(ctrl: &'static mut Control<'static>) -> ! {
+    let mut led_on = false;
+    loop {
+        Timer::after(Duration::from_secs(1)).await;
+        led_on = !led_on;
+        ctrl.gpio_set(0, led_on).await;
+        info!("LED {}", if led_on { "ON" } else { "OFF" });
+    }
+}
+
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     let p = embassy_rp::init(Default::default());
@@ -54,11 +65,15 @@ async fn main(spawner: Spawner) {
     );
 
     static STATE: StaticCell<cyw43::State> = StaticCell::new();
+    static CONTROLLER: StaticCell<Control> = StaticCell::new();
+
     let state = STATE.init(cyw43::State::new());
     let (_net_device, mut control, runner) = cyw43::new(state, pwr, spi, fw).await;
+    let ctrl = CONTROLLER.init(control);
     unwrap!(spawner.spawn(cyw43_task(runner)));
-    control.init(clm).await;
-    control
+    ctrl.init(clm).await;
+    ctrl
         .set_power_management(cyw43::PowerManagementMode::PowerSave)
         .await;
+    unwrap!(spawner.spawn(blinky(ctrl)));
 }
