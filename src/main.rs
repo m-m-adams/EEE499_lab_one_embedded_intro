@@ -1,12 +1,14 @@
 #![no_std]
 #![no_main]
 
+mod led_states;
+use led_states::*;
 use cyw43::Control;
 use cyw43_pio::{PioSpi, DEFAULT_CLOCK_DIVIDER};
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_rp::bind_interrupts;
-use embassy_rp::gpio::{Level, Output};
+use embassy_rp::gpio::{Input, Level, Output};
 use embassy_rp::peripherals::{DMA_CH0, PIO0};
 use embassy_rp::pio::{InterruptHandler, Pio};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
@@ -24,6 +26,12 @@ bind_interrupts!(struct Irqs {
 #[embassy_executor::task]
 async fn cyw43_task(runner: cyw43::Runner<'static, Output<'static>, PioSpi<'static, PIO0, 0, DMA_CH0>>) -> ! {
     runner.run().await
+}
+
+#[embassy_executor::task]
+async fn button_task(input: Input<'static>, output: Output<'static>) -> ! {
+    let mut led_controller = LedController::new(input, output);
+    led_controller.run().await;
 }
 
 #[embassy_executor::task]
@@ -76,4 +84,7 @@ async fn main(spawner: Spawner) {
         .set_power_management(cyw43::PowerManagementMode::PowerSave)
         .await;
     unwrap!(spawner.spawn(blinky(ctrl)));
+    let input = Input::new(p.PIN_6, embassy_rp::gpio::Pull::Up);
+    let output = Output::new(p.PIN_2, Level::Low);
+    unwrap!(spawner.spawn(button_task(input, output)));
 }

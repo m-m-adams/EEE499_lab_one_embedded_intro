@@ -12,7 +12,7 @@ Stage 1 - Setup:
 
 Stage 2 - Hello World!:
 1. Add serial printing hello world to the main program. To do this you will use the log macro from defmt
-2. Blink the onboard LED on and off. This LED is GPIO 0 controlled by the wifi chip
+2. Blink the onboard LED On and Off. This LED is GPIO 0 controlled by the wifi chip
 3. Every second toggle the LED and print ON or OFF to the terminal
 
 Stage 3 - State Machines:
@@ -21,12 +21,12 @@ Stage 3 - State Machines:
 3. Your possible states are :
    1. Fade in and out over 3 seconds
    2. Blink every two seconds
-   3. Toggle on button press
+   3. Toggle On button press
 7. Transitions are:
    4. While the LED is toggled ON, long pressing the button switches to a fade
-   5. While the LED is toggled ON, double pressing the button quickly switches to blinking
-   6. While the LED is blinking or fading, pressing the button switches back to toggle mode in the ON state
-   7. While the LED is blinking or fading, holding the button switches to toggle mode in the off state
+   5. While the LED is toggled ON, Double pressing the button quickly switches to Blinking
+   6. While the LED is Blinking or Fading, pressing the button switches back to toggle mode in the ON state
+   7. While the LED is Blinking or Fading, holding the button switches to toggle mode in the Off state
 
 Requirements:
    1. All four button/LED pairs should be their own state machine

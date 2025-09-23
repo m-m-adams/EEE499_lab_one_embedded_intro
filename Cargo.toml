@@ -25,6 +25,7 @@ cortex-m-rt = "0.7.5"
 panic-probe = { version = "1.0", features = ["print-defmt"] }
 static_cell = "2.1.1"
 portable-atomic = { version = "1.11.1", features = ["critical-section"] }
+embedded-hal = "1.0.0"
 
 
 # cargo build/run
@@ -79,7 +80,7 @@ incremental = false
 lto = 'fat'
 opt-level = 3
 
-#can't test this on the host
+#can't test this On the host
 [[bin]]
 name = "rp2040_eee499"
 test = false
