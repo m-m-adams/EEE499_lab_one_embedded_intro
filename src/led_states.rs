@@ -1,4 +1,4 @@
-use defmt::{dbg, debug, info, Format};
+use defmt::{dbg, debug, info, trace, Format};
 use embassy_futures::select::Either;
 use embassy_rp::gpio::{Input, Level, Output};
 use embassy_time::{Duration, Timer};
@@ -13,7 +13,6 @@ struct Blinking(bool);
 enum PressType {
     Short,
     Long,
-    Double,
 }
 
 trait LedStateTransition {
@@ -100,31 +99,21 @@ impl Button {
         self.input.wait_for_rising_edge().await;
         Timer::after(Duration::from_millis(1)).await;
         self.input.wait_for_high().await; // debounce
-        debug!("Button pressed");
+        trace!("Button pressed");
         let t = Timer::after(Duration::from_millis(200)); // check for hold
         let p = self.input.wait_for_low(); // check for release
-        debug!("waiting for hold or release");
+        trace!("waiting for hold or release");
         match embassy_futures::select::select(t, p).await {
             embassy_futures::select::Either::First(_) => {
                 // Timer completed first, button is held
                 dbg!(PressType::Long)
             }
             embassy_futures::select::Either::Second(_) => {
-                // Button released before timer, short press
-                let t = Timer::after(Duration::from_millis(200)); // check for double press
-                let p = self.input.wait_for_rising_edge(); // check for another press
-                match embassy_futures::select::select(t, p).await {
-                    embassy_futures::select::Either::First(_) => dbg!(PressType::Short), // Timer completed first, no second press
-                    embassy_futures::select::Either::Second(_) => {
-                        self.input.wait_for_falling_edge().await; // wait for release
-                        dbg!(PressType::Double)
-                    }
+                dbg!(PressType::Short)
                 }
             }
         }
-
-
-    }
+    
 }
 
 impl LedController {
