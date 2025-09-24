@@ -83,7 +83,7 @@ async fn main(spawner: Spawner) {
     ctrl
         .set_power_management(cyw43::PowerManagementMode::PowerSave)
         .await;
-    unwrap!(spawner.spawn(blinky(ctrl)));
+    //unwrap!(spawner.spawn(blinky(ctrl)));
     let input = Input::new(p.PIN_6, embassy_rp::gpio::Pull::Up);
     let output = Output::new(p.PIN_2, Level::Low);
     unwrap!(spawner.spawn(button_task(input, output)));

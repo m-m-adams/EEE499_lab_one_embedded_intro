@@ -2,11 +2,12 @@ use defmt::{dbg, debug, info, Format};
 use embassy_futures::select::Either;
 use embassy_rp::gpio::{Input, Level, Output};
 use embassy_time::{Duration, Timer};
-
+#[derive(Debug, Format)]
 struct Off;
+#[derive(Debug, Format)]
 struct On;
+#[derive(Debug, Format)]
 struct Blinking(bool);
-struct Fading(u8); // u8 represents brightness level from 0 to 255
 
 #[derive(Debug, Format)]
 enum PressType {
@@ -59,11 +60,28 @@ impl LedStateTransition for Blinking {
         }
     }
 }
-
+#[derive(Debug, Format)]
 enum LedState {
     Off(Off),
     On(On),
     Blinking(Blinking),
+}
+
+impl LedStateTransition for LedState {
+    async fn next_state(&self, controller: &mut Button) -> LedState {
+        match self {
+            LedState::Off(state) => state.next_state(controller).await,
+            LedState::On(state) => state.next_state(controller).await,
+            LedState::Blinking(state) => state.next_state(controller).await,
+        }
+    }
+    fn get_level(&self) -> Level {
+        match self {
+            LedState::Off(state) => state.get_level(),
+            LedState::On(state) => state.get_level(),
+            LedState::Blinking(state) => state.get_level(),
+        }
+    }
 }
 
 pub struct LedController {
@@ -84,7 +102,7 @@ impl Button {
         self.input.wait_for_high().await; // debounce
         debug!("Button pressed");
         let t = Timer::after(Duration::from_millis(200)); // check for hold
-        let p = self.input.wait_for_falling_edge(); // check for release
+        let p = self.input.wait_for_low(); // check for release
         debug!("waiting for hold or release");
         match embassy_futures::select::select(t, p).await {
             embassy_futures::select::Either::First(_) => {
@@ -111,7 +129,8 @@ impl Button {
 
 impl LedController {
 
-    pub fn new(input: Input<'static>, output: Output<'static>) -> Self {
+    pub fn new(input: Input<'static>, mut output: Output<'static>) -> Self {
+        output.set_inversion(true);
         Self {
             state: LedState::Off(Off),
             status: 0,
@@ -126,18 +145,10 @@ impl LedController {
 
     pub async fn run(&mut self) -> ! {
         loop {
-            let next_state = match &self.state {
-                LedState::Off(state) => state.next_state(&mut self.input).await,
-                LedState::On(state) => state.next_state(&mut self.input).await,
-                LedState::Blinking(state) => state.next_state(&mut self.input).await,
-            };
-            let level = match &self.state {
-                LedState::Off(state) => state.get_level(),
-                LedState::On(state) => state.get_level(),
-                LedState::Blinking(state) => state.get_level(),
-            };
+            let level = self.state.get_level();
             self.set_level(level).await;
-            self.state = next_state;
+            let next_state = self.state.next_state(&mut self.input).await;
+            self.state = dbg!(next_state);
         }
     }
 }
