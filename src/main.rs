@@ -1,27 +1,22 @@
 #![no_std]
 #![no_main]
 
+mod controllers;
 mod led_states;
 mod pending;
-mod controllers;
 
+use crate::controllers::run_led_state_machine;
 use cyw43::Control;
 use cyw43_pio::{PioSpi, DEFAULT_CLOCK_DIVIDER};
 use defmt::*;
 use embassy_executor::Spawner;
-use embassy_futures::join::join;
-use embassy_futures::select::select;
-use embassy_rp::bind_interrupts;
 use embassy_rp::gpio::{Input, Level, Output};
 use embassy_rp::peripherals::{DMA_CH0, PIO0};
 use embassy_rp::pio::{InterruptHandler, Pio};
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use embassy_sync::channel::Channel;
+use embassy_rp::{bind_interrupts, pwm};
 use embassy_time::{Duration, Timer};
-use led_states::*;
 use static_cell::StaticCell;
 use {defmt_rtt as _, panic_probe as _};
-use crate::controllers::run_led_state_machine;
 
 bind_interrupts!(struct Irqs {
     PIO0_IRQ_0 => InterruptHandler<PIO0>;
@@ -76,7 +71,7 @@ async fn main(spawner: Spawner) {
     static CONTROLLER: StaticCell<Control> = StaticCell::new();
 
     let state = STATE.init(cyw43::State::new());
-    let (_net_device, mut control, runner) = cyw43::new(state, pwr, spi, fw).await;
+    let (_net_device, control, runner) = cyw43::new(state, pwr, spi, fw).await;
     let ctrl = CONTROLLER.init(control);
     unwrap!(spawner.spawn(cyw43_task(runner)));
     ctrl.init(clm).await;
@@ -84,6 +79,9 @@ async fn main(spawner: Spawner) {
         .await;
     //unwrap!(spawner.spawn(blinky(ctrl)));
     let input = Input::new(p.PIN_6, embassy_rp::gpio::Pull::Up);
-    let output = Output::new(p.PIN_2, Level::Low);
-    spawner.spawn(run_led_state_machine(input, output)).unwrap();
+    let conf = pwm::Config::default();
+    let (pwm_a, pwm_b) = pwm::Pwm::new_output_ab(p.PWM_SLICE1, p.PIN_2, p.PIN_3, conf).split();
+    spawner
+        .spawn(run_led_state_machine(input, pwm_a.unwrap()))
+        .unwrap();
 }
