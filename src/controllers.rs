@@ -71,7 +71,9 @@ impl LedController {
     fn set_level(&mut self, level: LedLevel) {
         let l: u8 = level.into();
         // Set the LED on or off
-        self.output.set_duty_cycle_percent(100 - l).expect("level not between 0 and 100");
+        self.output
+            .set_duty_cycle_percent(100 - l)
+            .expect("level not between 0 and 100");
     }
 
     pub async fn time(&mut self) {
