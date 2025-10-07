@@ -1,5 +1,4 @@
 use crate::led_states::{LedLevel, LedState, LedStateTransition, Off, PressType};
-use defmt::{dbg, trace};
 use embassy_futures::join::join;
 use embassy_futures::select::{select, Either};
 use embassy_rp::gpio::Input;

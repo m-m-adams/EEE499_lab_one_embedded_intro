@@ -1,8 +1,17 @@
 use crate::pending;
+use core::ops::{Add, Mul};
 use defmt::Format;
 use embassy_time::{Duration, Timer};
 use enum_dispatch::enum_dispatch;
 
+#[enum_dispatch(LedStateTransition)]
+#[derive(Debug, Format)]
+pub(crate) enum LedState {
+    Off,
+    On,
+    Blinking,
+    Fading,
+}
 #[derive(Debug, Format)]
 pub struct Off;
 #[derive(Debug, Format)]
@@ -12,8 +21,8 @@ pub struct Blinking(bool);
 
 #[derive(Debug, Format)]
 pub struct Fading {
-    level: u8,
-    direction: bool,
+    level: LedLevel,
+    direction: FadeDirection,
 }
 
 #[derive(Debug, Format)]
@@ -22,32 +31,19 @@ pub enum PressType {
     Long,
     Double,
 }
-
-#[derive(Debug, Format)]
+/// an i8 limited to the range 0-100 that can only be created at 0 or 100
+#[derive(Debug, Format, PartialOrd, PartialEq, Default, Copy, Clone)]
 pub struct LedLevel {
-    level: u8,
+    level: i8,
 }
 
-impl From<u8> for LedLevel {
-    fn from(l: u8) -> Self {
-        let level = l.clamp(0, 100);
-        LedLevel { level }
-    }
-}
-impl From<bool> for LedLevel {
-    fn from(l: bool) -> Self {
-        match l {
-            false => LedLevel { level: 0 },
-            true => LedLevel { level: 100 },
-        }
-    }
+
+#[derive(Debug, Format, Copy, Clone)]
+enum FadeDirection {
+    Up,
+    Down,
 }
 
-impl From<LedLevel> for u8 {
-    fn from(l: LedLevel) -> Self {
-        l.level
-    }
-}
 
 #[enum_dispatch]
 pub trait LedStateTransition {
@@ -61,10 +57,10 @@ impl LedStateTransition for Off {
         pending::pending::<LedState>().await
     }
     fn press_transition(&self, _b: PressType) -> LedState {
-        LedState::On(On)
+        On.into()
     }
     fn get_level(&self) -> LedLevel {
-        LedLevel { level: 0 }
+        LedLevel::MIN
     }
 }
 
@@ -74,17 +70,19 @@ impl LedStateTransition for On {
     }
     fn press_transition(&self, b: PressType) -> LedState {
         match b {
-            PressType::Long => LedState::Blinking(Blinking(true)),
-            PressType::Double => LedState::Fading(Fading {
-                level: 100,
-                direction: false,
-            }),
-            _ => LedState::Off(Off),
+            PressType::Long => Blinking(true).into(),
+            PressType::Double => Fading {
+                level: LedLevel::MAX,
+                direction: FadeDirection::Up,
+            }
+            .into(),
+
+            _ => Off.into(),
         }
     }
 
     fn get_level(&self) -> LedLevel {
-        LedLevel { level: 100 }
+        LedLevel::MAX
     }
 }
 
@@ -96,8 +94,8 @@ impl LedStateTransition for Blinking {
     }
     fn press_transition(&self, b: PressType) -> LedState {
         match b {
-            PressType::Long => LedState::On(On),
-            _ => LedState::Off(Off),
+            PressType::Long => On.into(),
+            _ => Off.into(),
         }
     }
     fn get_level(&self) -> LedLevel {
@@ -109,19 +107,15 @@ impl LedStateTransition for Fading {
     async fn time_transition(&self) -> LedState {
         let time = Timer::after(Duration::from_millis(50));
         time.await;
-        let l = self.level;
         let dir = {
-            if self.level == 0 {
-                true
-            } else if self.level == 100 {
-                false
-            } else {
-                self.direction
+            match self.level {
+                LedLevel::MIN => FadeDirection::Up,
+                LedLevel::MAX => FadeDirection::Down,
+                _ => self.direction,
             }
         };
-        let mult: i8 = if dir { 1 } else { -1 };
         Fading {
-            level: (l as i8 + 10 * mult).clamp(0, 100) as u8,
+            level: self.level + self.direction * 10,
             direction: dir,
         }
         .into()
@@ -135,15 +129,45 @@ impl LedStateTransition for Fading {
     }
 
     fn get_level(&self) -> LedLevel {
-        self.level.into()
+        self.level
     }
 }
 
-#[enum_dispatch(LedStateTransition)]
-#[derive(Debug, Format)]
-pub(crate) enum LedState {
-    Off,
-    On,
-    Blinking,
-    Fading,
+
+
+impl LedLevel {
+    pub const MAX: LedLevel = LedLevel { level: 100 };
+    pub const MIN: LedLevel = LedLevel { level: 0 };
+}
+impl Add<i8> for LedLevel {
+    type Output = Self;
+    fn add(self, rhs: i8) -> Self::Output {
+        let level = (self.level + rhs).clamp(0, 100);
+        LedLevel { level }
+    }
+}
+impl From<bool> for LedLevel {
+    fn from(l: bool) -> Self {
+        if l {
+            LedLevel::MAX
+        } else {
+            LedLevel::MIN
+        }
+    }
+}
+
+impl From<LedLevel> for u8 {
+    fn from(l: LedLevel) -> Self {
+        l.level as u8
+    }
+}
+
+impl<T: core::ops::Neg<Output = T>> Mul<T> for FadeDirection {
+    type Output = T;
+    fn mul(self, rhs: T) -> Self::Output {
+        match self {
+            FadeDirection::Up => rhs,
+            FadeDirection::Down => -rhs,
+        }
+    }
 }

@@ -28,6 +28,7 @@ async fn cyw43_task(
     runner.run().await
 }
 
+#[allow(dead_code)]
 async fn setup_wifi(
     spawner: &Spawner,
     p23: Peri<'static, PIN_23>,
@@ -36,7 +37,7 @@ async fn setup_wifi(
     p29: Peri<'static, PIN_29>,
     pio0: Peri<'static, PIO0>,
     dma_ch0: Peri<'static, DMA_CH0>,
-) -> &'static mut Control<'static>{
+) -> &'static mut Control<'static> {
     // let fw = include_bytes!("../cyw43-firmware/43439A0.bin");
     // let clm = include_bytes!("../cyw43-firmware/43439A0_clm.bin");
 
