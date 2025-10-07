@@ -2,6 +2,9 @@
 #![no_main]
 
 mod led_states;
+mod pending;
+mod controllers;
+
 use cyw43::Control;
 use cyw43_pio::{PioSpi, DEFAULT_CLOCK_DIVIDER};
 use defmt::*;
@@ -18,7 +21,7 @@ use embassy_time::{Duration, Timer};
 use led_states::*;
 use static_cell::StaticCell;
 use {defmt_rtt as _, panic_probe as _};
-
+use crate::controllers::run_led_state_machine;
 
 bind_interrupts!(struct Irqs {
     PIO0_IRQ_0 => InterruptHandler<PIO0>;
@@ -30,7 +33,6 @@ async fn cyw43_task(
 ) -> ! {
     runner.run().await
 }
-
 
 #[embassy_executor::task]
 async fn blinky(ctrl: &'static mut Control<'static>) -> ! {
@@ -83,6 +85,5 @@ async fn main(spawner: Spawner) {
     //unwrap!(spawner.spawn(blinky(ctrl)));
     let input = Input::new(p.PIN_6, embassy_rp::gpio::Pull::Up);
     let output = Output::new(p.PIN_2, Level::Low);
-    static SHARED_CHANNEL: LedChannel = Channel::new();
-    setup_led_button_tasks(spawner, input, output, &SHARED_CHANNEL).await;
+    spawner.spawn(run_led_state_machine(input, output)).unwrap();
 }
