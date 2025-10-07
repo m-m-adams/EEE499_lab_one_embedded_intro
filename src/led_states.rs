@@ -1,8 +1,5 @@
 use crate::pending;
-use core::future::Future;
 use defmt::Format;
-use embassy_rp::gpio::Level;
-use embassy_rp::pio::Direction;
 use embassy_time::{Duration, Timer};
 use enum_dispatch::enum_dispatch;
 

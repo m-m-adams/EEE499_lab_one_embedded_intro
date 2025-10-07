@@ -78,10 +78,23 @@ async fn main(spawner: Spawner) {
     ctrl.set_power_management(cyw43::PowerManagementMode::PowerSave)
         .await;
     //unwrap!(spawner.spawn(blinky(ctrl)));
-    let input = Input::new(p.PIN_6, embassy_rp::gpio::Pull::Up);
+    let input1 = Input::new(p.PIN_6, embassy_rp::gpio::Pull::Up);
+    let input2 = Input::new(p.PIN_7, embassy_rp::gpio::Pull::Up);
+    let input3 = Input::new(p.PIN_8, embassy_rp::gpio::Pull::Up);
+    let input4 = Input::new(p.PIN_9, embassy_rp::gpio::Pull::Up);
     let conf = pwm::Config::default();
-    let (pwm_a, pwm_b) = pwm::Pwm::new_output_ab(p.PWM_SLICE1, p.PIN_2, p.PIN_3, conf).split();
+    let (pwm_a, pwm_b) = pwm::Pwm::new_output_ab(p.PWM_SLICE1, p.PIN_2, p.PIN_3, conf.clone()).split();
+    let (pwm_c, pwm_d) = pwm::Pwm::new_output_ab(p.PWM_SLICE2, p.PIN_4, p.PIN_5, conf).split();
     spawner
-        .spawn(run_led_state_machine(input, pwm_a.unwrap()))
+        .spawn(run_led_state_machine(input1, pwm_a.unwrap()))
+        .unwrap();
+    spawner
+        .spawn(run_led_state_machine(input2, pwm_b.unwrap()))
+        .unwrap();
+    spawner
+        .spawn(run_led_state_machine(input3, pwm_c.unwrap()))
+        .unwrap();
+    spawner
+        .spawn(run_led_state_machine(input4, pwm_d.unwrap()))
         .unwrap();
 }

@@ -2,7 +2,7 @@ use crate::led_states::{LedLevel, LedState, LedStateTransition, Off, PressType};
 use defmt::{dbg, trace};
 use embassy_futures::join::join;
 use embassy_futures::select::{select, Either};
-use embassy_rp::gpio::{Input, Level, Output};
+use embassy_rp::gpio::Input;
 use embassy_rp::pwm::PwmOutput;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::{Channel, Receiver, Sender};
@@ -37,24 +37,22 @@ impl ButtonController {
 
     async fn detect_press(&mut self) -> PressType {
         self.press().await;
-        trace!("Button pressed");
         let t = Timer::after(Duration::from_millis(200)); // check for hold
         let p = self.release();
-        trace!("waiting for hold or release");
         if let Either::First(_) = select(t, p).await {
             // Timer completed first, button is held
-            return dbg!(PressType::Long);
+            return PressType::Long;
         };
         let t = Timer::after(Duration::from_millis(200)); // check for hold
         let p = self.release();
         match select(t, p).await {
             Either::First(_) => {
                 // Timer first, short press
-                dbg!(PressType::Short)
+                PressType::Short
             }
             Either::Second(_) => {
                 // second press first, double press
-                dbg!(PressType::Double)
+                PressType::Double
             }
         }
     }
@@ -80,7 +78,7 @@ impl LedController {
         let level = self.state.get_level();
         self.set_level(level);
         let next_state = self.state.time_transition().await;
-        self.state = dbg!(next_state)
+        self.state = next_state
     }
 
     pub fn button_pressed(&mut self, press: PressType) {
