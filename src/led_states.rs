@@ -54,82 +54,54 @@ pub trait LedStateTransition {
 
 impl LedStateTransition for Off {
     async fn time_transition(&self) -> LedState {
-        pending::pending::<LedState>().await
+        todo!()
     }
     fn press_transition(&self, _b: PressType) -> LedState {
-        On.into()
+        todo!()
     }
     fn get_level(&self) -> LedLevel {
-        LedLevel::MIN
+        todo!()
     }
 }
 
 impl LedStateTransition for On {
     async fn time_transition(&self) -> LedState {
-        pending::pending::<LedState>().await
+        todo!()
     }
     fn press_transition(&self, b: PressType) -> LedState {
-        match b {
-            PressType::Long => Blinking(true).into(),
-            PressType::Double => Fading {
-                level: LedLevel::MAX,
-                direction: FadeDirection::Up,
-            }
-            .into(),
-
-            _ => Off.into(),
-        }
+        todo!()
     }
 
     fn get_level(&self) -> LedLevel {
-        LedLevel::MAX
+        todo!()
     }
 }
 
 impl LedStateTransition for Blinking {
     async fn time_transition(&self) -> LedState {
-        let time = Timer::after(Duration::from_millis(1000));
-        time.await;
-        LedState::Blinking(Blinking(!self.0))
+        todo!()
     }
     fn press_transition(&self, b: PressType) -> LedState {
-        match b {
-            PressType::Long => On.into(),
-            _ => Off.into(),
-        }
+        todo!()
+
     }
     fn get_level(&self) -> LedLevel {
-        self.0.into()
+        todo!()
     }
 }
 
 impl LedStateTransition for Fading {
     async fn time_transition(&self) -> LedState {
-        let time = Timer::after(Duration::from_millis(50));
-        time.await;
-        let dir = {
-            match self.level {
-                LedLevel::MIN => FadeDirection::Up,
-                LedLevel::MAX => FadeDirection::Down,
-                _ => self.direction,
-            }
-        };
-        Fading {
-            level: self.level + self.direction * 10,
-            direction: dir,
-        }
-        .into()
+        todo!()
     }
 
     fn press_transition(&self, b: PressType) -> LedState {
-        match b {
-            PressType::Long => LedState::On(On),
-            _ => LedState::Off(Off),
-        }
+        todo!()
+
     }
 
     fn get_level(&self) -> LedLevel {
-        self.level
+        todo!()
     }
 }
 
