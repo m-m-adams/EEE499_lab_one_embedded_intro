@@ -88,7 +88,7 @@ unsafe fn pwm_channel_7_wrap(cs: CriticalSection) {
     unsafe {
         static mut COUNT: u8 = 0;
 
-        COUNT = COUNT + 1;
+        COUNT += 1;
 
         if COUNT == 3 {
             let mut p = OUT_PIN.borrow(cs).borrow_mut();
