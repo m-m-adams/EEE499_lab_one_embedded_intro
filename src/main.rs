@@ -8,7 +8,6 @@ mod pending;
 mod wifi;
 
 use core::cell::RefCell;
-use cortex_m::delay::Delay;
 use cortex_m::peripheral::NVIC;
 use critical_section::CriticalSection;
 use defmt::*;
@@ -18,11 +17,10 @@ use embassy_rp::pac::pwm::regs::Intr;
 use embassy_rp::peripherals::PIO0;
 use embassy_rp::pio::InterruptHandler;
 use embassy_rp::pwm::{Config, Pwm};
-use embassy_rp::{bind_interrupts, config, interrupt, pac};
+use embassy_rp::{bind_interrupts, interrupt, pac};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_time::Duration;
-use fixed::FixedU16;
 use {defmt_rtt as _, panic_probe as _};
 
 // interrupts exist in what's called a vector table, which is a table of addresses that point to functions that are called when an interrupt occurs.
@@ -41,7 +39,7 @@ static PWM: Mutex<CriticalSectionRawMutex, RefCell<Option<Pwm>>> = Mutex::new(Re
 static OUT_PIN: Mutex<CriticalSectionRawMutex, RefCell<Option<embassy_rp::gpio::Output<'static>>>> =
     Mutex::new(RefCell::new(None));
 #[embassy_executor::main]
-async fn main(spawner: Spawner) {
+async fn main(_spawner: Spawner) {
     let p = embassy_rp::init(Default::default());
     let mut config = Config::default();
     config.top = 52157;
