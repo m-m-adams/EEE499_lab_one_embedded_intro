@@ -51,12 +51,13 @@ Implement a non pre emptive clock driven scheduler to run these tasks.
 This means that once a task is given the processor it runs to completion. 
 We will assume that no blocking for resources is possible. 
 A task will only block when it is waiting for its next execution.
+While each task is running it should light an LED (task 1 lights LED 1, task 2 lights LED 2, etc.)
 
 You are to implement the following:
 
-1. A TCB struct (or struct of structs) that includes a task's priority, period, max execution time, and remaining tics.
+1. A TCB struct (or struct of structs) that includes a task's priority, period, max execution time, run function, and remaining tics.
 2. A ready and a blocked "queue" 
-    1. They don't have to be queues though, ready is probably a channel and blocked is probably an array of N Option<TCB>s
+    1. Just conceptually queues, for the implementation ready is probably a channel and blocked is probably an array of N Option<TCB>s
 3. A sleep() function that the tasks can call to delay their next release.
     1. Each time a task finishes it sets its a number of ticks (50ms each) to delay and places itself in the blocked queue. 
     2. You'll probably do this by implementing a `sleep(thread: TCB)` function that sends to a channel, and then reading from that channel in the ISR
@@ -66,17 +67,43 @@ You are to implement the following:
     3. When all the nodes of the blocked queue have been updated and the appropriate tasks have been moved back to the ready queue the ISR calls the scheduler.
 5. A priority-based scheduler that runs every clock tick, as it is called by the clock tic ISR.
     1. the scheduler is to inspect the blocked queue and sends tasks to the channel in priority order
-6. Receive your tasks from an embassy task and run them 
+    2. If a task is ready to be ran, it is placed in the ready queue and the scheduler pends IRQ 0
+6. A receiver in IRQ 0 that runs tasks as they are sent
+
 Your scheduler must be generic enough that if a new set of tasks was given, it could work
 
 Commit your code and push it to github. Please make sure it builds.
 
-## Part 3 - Pre emptive scheduling
-Run the clock driven schedule from part 2 in parallel with the async schedule from lab 1. The starter code for this lab
+## Part 3 - Pre emptive scheduling with Embassy
+The goal is to run the clock driven schedule from part 2 in parallel with the async schedule from lab 1. The starter code for this lab
 includes a working solution of lab1 for reference. 
 
-To run preemptively we'll use two different executors, one thread mode, and one interrupt mode. Determine the priorities for
+To run preemptively we'll use two different executors, one thread mode, and one interrupt mode using IRQ 0. Determine the priorities for
 the button/LED tasks and the mocked real time tasks using earliest-deadline-first scheduling, and put the higher priority tasks
-in the interrupt executor. 
+in the interrupt executor. If you determine that you need more priorities you can add more interrupt executors. Use the 
+SWI interrupts for the interrupt executor. They work by triggering a software interrupt when a future is ready to be 
+polled. In your real time tasks your PWM interrupt will send a task to a channel in an interrupt task. 
+That channel will then trigger SWI0. When your ISR ends rather than returning to SVC mode it will enter the SWI0 handler
+which polls the future and runs the task.
+```aiignore
+static EXECUTOR_HIGH: InterruptExecutor = InterruptExecutor::new();
+
+#[interrupt]
+unsafe fn SWI_IRQ_0() {
+    unsafe { EXECUTOR_HIGH.on_interrupt() }
+}
+
+... in main
+    // set interrupt priority, 0 is highest but should be kept for hardware interrupts. Otherwise they can't trigger to 
+    // set tasks as ready
+    interrupt::SWI_IRQ_0.set_priority(Priority::P2);
+    let spawner = EXECUTOR_HIGH.start(interrupt::SWI_IRQ_0);
+    spawner.spawn(unwrap!(run_med()));
+
+```
+
+Use 2 LEDs in state machines as Lab 1, and use the other two LEDs to show which task is running in the real time schedule.
+Real time task 1 should light LED 1, real time task 2 should light LED 2, task 3 blinks LED 1, task 4 blinks LED 2.
+
 
 Once again commit your code and push it to github. Please make sure it builds.

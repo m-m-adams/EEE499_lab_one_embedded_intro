@@ -9,12 +9,14 @@ mod wifi;
 
 use core::cell::RefCell;
 use cortex_m::delay::Delay;
+use cortex_m::peripheral::NVIC;
 use critical_section::CriticalSection;
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_rp::peripherals::PIO0;
 use embassy_rp::pio::InterruptHandler;
 use embassy_rp::{bind_interrupts, config, interrupt, pac};
+use embassy_rp::interrupt::Interrupt;
 use embassy_rp::pac::pwm::regs::Intr;
 use embassy_rp::pwm::{Config, Pwm};
 use embassy_sync::blocking_mutex::Mutex;
@@ -27,11 +29,15 @@ use fixed::{FixedU16};
 // interrupts exist in what's called a vector table, which is a table of addresses that point to functions that are called when an interrupt occurs.
 // This creates function called PIO0_IRQ_0 and sets it as an interrupt handler. That function will call InterruptHandler::on_interrupt.
 // This is used in rust at compile time to prove to peripherals that interrupts they require are registered
+
 bind_interrupts!(struct Irqs {
     PIO0_IRQ_0 => InterruptHandler<PIO0>;
 });
+
 // needs to be global to access it from interrupt context. Note that these are wrapped in mutexes.
 // Because we're now also using interrupts we need to synchronize access properly
+// It's a refcell to allow mutability, and it's an option since it won't be initialized until our main function runs
+
 static PWM: Mutex<CriticalSectionRawMutex, RefCell<Option<Pwm>>> = Mutex::new(RefCell::new(None));
 static OUT_PIN: Mutex<CriticalSectionRawMutex, RefCell<Option<embassy_rp::gpio::Output<'static>>>> = Mutex::new(RefCell::new(None));
 #[embassy_executor::main]
@@ -50,9 +56,10 @@ async fn main(spawner: Spawner) {
     OUT_PIN.lock(|p|{p.borrow_mut().replace(p8);});
     // set the interrupt to get triggered when the counter wraps
     embassy_rp::pac::PWM.inte().modify(|reg|{reg.set_ch7(true)});
-    // unmask the interrupt
+    // unmask the interrupts
     unsafe {
-        cortex_m::peripheral::NVIC::unmask(embassy_rp::pac::Interrupt::PWM_IRQ_WRAP);
+        NVIC::unmask(Interrupt::PWM_IRQ_WRAP);
+        NVIC::unmask(Interrupt::SWI_IRQ_0);
     }
 
 }
@@ -68,6 +75,10 @@ fn PWM_IRQ_WRAP() {
         }
         // Clear the interrupt, so we don't immediately re-enter this irq handler
     });
+}
+#[interrupt]
+fn SWI_IRQ_0() {
+    trace!("SWI_IRQ_0");
 }
 
 unsafe fn pwm_channel_7_wrap(cs: CriticalSection) {
@@ -90,7 +101,7 @@ unsafe fn pwm_channel_7_wrap(cs: CriticalSection) {
             trace!("delaying");
             embassy_time::block_for(Duration::from_millis(500));
             trace!("done delaying");
-
+            NVIC::pend(Interrupt::SWI_IRQ_0);
 
 
         }
