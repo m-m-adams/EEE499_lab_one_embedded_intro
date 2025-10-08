@@ -51,7 +51,7 @@ async fn main(_spawner: Spawner) {
         p.borrow_mut().replace(pwm);
     });
 
-    let mut p8 = embassy_rp::gpio::Output::new(p.PIN_2, embassy_rp::gpio::Level::Low);
+    let mut p8 = embassy_rp::gpio::Output::new(p.PIN_4, embassy_rp::gpio::Level::Low);
     p8.set_high();
     OUT_PIN.lock(|p| {
         p.borrow_mut().replace(p8);
@@ -63,6 +63,18 @@ async fn main(_spawner: Spawner) {
         NVIC::unmask(Interrupt::PWM_IRQ_WRAP);
         NVIC::unmask(Interrupt::SWI_IRQ_0);
     }
+
+    // For part 3
+    // let input1 = Input::new(p.PIN_6, embassy_rp::gpio::Pull::Up);
+    // let input2 = Input::new(p.PIN_7, embassy_rp::gpio::Pull::Up);
+    // let (pwm_a, pwm_b) =
+    //     pwm::Pwm::new_output_ab(p.PWM_SLICE1, p.PIN_2, p.PIN_3, pwm::Config::default()).split();
+    // spawner
+    //     .spawn(controllers::run_led_state_machine(input1, pwm_a.unwrap()))
+    //     .unwrap();
+    // spawner
+    //     .spawn(controllers::run_led_state_machine(input2, pwm_b.unwrap()))
+    //     .unwrap();
 }
 #[interrupt]
 fn PWM_IRQ_WRAP() {
