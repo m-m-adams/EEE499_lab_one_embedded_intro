@@ -1,12 +1,12 @@
-use embassy_rp::gpio::{Level, Output};
-use cyw43_pio::{PioSpi, DEFAULT_CLOCK_DIVIDER};
-use embassy_rp::peripherals::{DMA_CH0, PIN_23, PIN_24, PIN_25, PIN_29, PIO0};
-use embassy_executor::Spawner;
-use embassy_rp::Peri;
-use cyw43::Control;
-use embassy_rp::pio::Pio;
-use static_cell::StaticCell;
 use crate::Irqs;
+use cyw43::Control;
+use cyw43_pio::{PioSpi, DEFAULT_CLOCK_DIVIDER};
+use embassy_executor::Spawner;
+use embassy_rp::gpio::{Level, Output};
+use embassy_rp::peripherals::{DMA_CH0, PIN_23, PIN_24, PIN_25, PIN_29, PIO0};
+use embassy_rp::pio::Pio;
+use embassy_rp::Peri;
+use static_cell::StaticCell;
 
 #[embassy_executor::task]
 async fn cyw43_task(

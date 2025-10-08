@@ -37,13 +37,11 @@ pub struct LedLevel {
     level: i8,
 }
 
-
 #[derive(Debug, Format, Copy, Clone)]
 enum FadeDirection {
     Up,
     Down,
 }
-
 
 #[enum_dispatch]
 pub trait LedStateTransition {
@@ -132,8 +130,6 @@ impl LedStateTransition for Fading {
         self.level
     }
 }
-
-
 
 impl LedLevel {
     pub const MAX: LedLevel = LedLevel { level: 100 };
