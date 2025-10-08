@@ -1,0 +1,35 @@
+name: Rust PR Checks
+
+on:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-Dwarnings"
+
+jobs:
+  build:
+    name: Cargo build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup target add thumbv6m-none-eabi
+      - run: cargo build --all-targets --all-features
+
+  fmt:
+    name: Cargo Fmt (Check Only)
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Does not block clippy
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup target add thumbv6m-none-eabi
+      - run: rustup component add rustfmt
+      - run: cargo fmt --all -- --check
+
+
+  clippy_check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run Clippy
+        run: cargo clippy --all-targets --all-features
